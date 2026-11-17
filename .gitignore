@@ -1,0 +1,17 @@
+# Public repository allowlist.
+*
+!/.gitignore
+!/app.py
+!/launch.py
+!/core.py
+!/reader.py
+!/requirements.txt
+!/START.bat
+!/DEPLOY.md
+!/.github/
+!/.github/workflows/
+!/.github/workflows/pages.yml
+!/website/
+!/website/build_share.py
+!/website/page-template.html
+!/website/cards.html

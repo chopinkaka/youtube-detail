@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="영상 깊이 읽기 Windows 프로그램과 예시 요약 카드">
+<title>영상 깊이 읽기</title>
+<style>
+:root{color-scheme:light;--ink:#162e2a;--muted:#465b54;--green:#145a4a;--line:#d5e0d8;--paper:#f8f9f4}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:"Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif;line-height:1.65;word-break:keep-all}
+main{width:min(1040px,100% - 48px);margin:auto;padding:90px 0 56px}
+.hero{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,1fr);gap:44px;align-items:center}
+h1,h2,p{margin:0}h1{font-size:clamp(42px,7vw,76px);letter-spacing:-.08em;line-height:1.1}
+.lead{max-width:29em;margin-top:24px;font-size:clamp(17px,2vw,22px);color:var(--muted)}
+.download{padding:28px;border:1px solid var(--line);background:white;border-radius:24px}
+h2{font-size:23px;letter-spacing:-.045em}p.note{margin-top:10px;color:var(--muted);font-size:14px}
+.button{display:inline-block;background:var(--green);color:white;border-radius:12px;padding:12px 18px;text-decoration:none;font-weight:700;margin:16px 0 4px}
+.button:hover{background:#10483c}a{color:var(--green)}a:focus-visible{outline:3px solid #bb7c23;outline-offset:4px}
+.sample{margin-top:46px;border-top:1px solid var(--line);padding-top:32px;display:flex;justify-content:space-between;align-items:center;gap:20px}
+.sample a{font-weight:700;text-underline-offset:4px;flex-shrink:0}
+.setup{margin-top:32px;border-top:1px solid var(--line);padding-top:24px}
+ol{padding-left:22px;margin-bottom:0}li+li{margin-top:4px}.version{margin-top:18px;color:var(--muted);font-size:13px}
+@media(max-width:730px){main{width:calc(100% - 36px);padding-top:48px}.hero{grid-template-columns:1fr;gap:26px}.sample{align-items:flex-start;flex-direction:column;margin-top:32px}}
+</style>
+</head>
+<body>
+<main>
+  <div class="hero">
+    <div>
+      <h1>영상 깊이 읽기</h1>
+      <p class="lead">유튜브 영상이나 음성 파일을 읽기 좋은 노트와 카드로 정리합니다. 핵심부터 보고, 필요한 대목은 원문 시각을 따라 확인하세요.</p>
+    </div>
+    <section class="download" aria-labelledby="download-title">
+      <h2 id="download-title">Windows에서 시작하기</h2>
+      <a class="button" href="youtube-detail-windows.zip?v=__APP_VERSION__" download="youtube-detail-windows.zip">최신 프로그램 받기</a>
+      <p class="note">Windows · Python 3.11 이상<br>음성 인식은 내 PC에서 실행됩니다.</p>
+      <p class="version">프로그램 버전 <strong>__APP_VERSION__</strong> · __APP_DATE__<br>이 페이지에서 최신 버전을 받을 수 있습니다.</p>
+    </section>
+  </div>
+  __SAMPLE__
+  <section class="setup">
+    <h2>설치와 업데이트</h2>
+    <ol>
+      <li>ZIP을 풀고 <strong>START.bat</strong>를 실행하세요. 처음 실행할 때 필요한 패키지를 설치합니다.</li>
+      <li>핵심 노트를 자동 생성하려면 본인의 Gemini API 키를 앱에 입력하세요.</li>
+      <li>첫 실행에서 자동 업데이트를 켜면, 다음부터는 실행할 때 최신 버전을 받습니다. 기존 작업은 같은 폴더에서 계속 열 수 있습니다.</li>
+    </ol>
+  </section>
+</main>
+</body>
+</html>
