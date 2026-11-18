@@ -8,6 +8,7 @@ const schema = {
     type: "object",
     properties: {
         title: string,
+        shortTitle: string,
         takeaway: string,
         sections: {
             type: "array",
@@ -37,7 +38,7 @@ const schema = {
         },
         caveat: { type: ["string", "null"] },
     },
-    required: ["title", "takeaway", "sections", "caveat"],
+    required: ["title", "shortTitle", "takeaway", "sections", "caveat"],
 };
 
 export function normalizeYouTube(value) {
@@ -134,6 +135,7 @@ export async function analyzeVideo(url, key, length, focus, request = fetch, onS
 영상에서 N가지 전략·단계를 예고하면 각각 제목과 설명을 붙여 연결한다. 일반 주장과 화자 개인 사례, 실제 행동과 계획을 구분한다.
 러닝 문맥에서는 러닝 이코노미, 역치 페이스, 카본화, 인터벌, 케이던스, 빌드업과 같은 전문 용어를 사용한다. 불확실한 말·수치·시각은 추측으로 채우지 않는다.
 요약 제목, 한 문장 핵심, 1~9개 주제로 나누고 각 주제에 1~4개 항목을 둔다. heading은 짧게, body는 설명 문단으로, time은 확인 가능한 근거 시작 초 또는 null이다.
+shortTitle은 위 제목을 파일 목록에서 알아볼 수 있는 2~6어절의 짧은 한국어 제목으로 요약한다. 구별에 필요한 핵심 주제나 인명·수치는 살리고 확장자와 장식 문자는 생략한다.
 논점별로 근거 시각을 연결하되 본문에는 내부 번호를 넣지 않는다. 불확실성은 caveat에 짧게 적고 없으면 null이다.
 분량: ${lengths[length] || lengths["균형 있게"]}. 독자가 특히 궁금한 정보: ${JSON.stringify(focus)}.
 관심 내용이 있으면 관련 논점의 위치를 앞쪽으로 당기고 방법·수치·조건을 더 구체적으로 설명한다. 영상에 없다면 언급되지 않았다고 짧게 알린다. 영상 전체의 주요 논점도 유지한다.
@@ -163,6 +165,18 @@ export async function analyzeVideo(url, key, length, focus, request = fetch, onS
 function timeLabel(seconds) {
     const units = [Math.floor(seconds / 60), seconds % 60];
     return units.map(unit => String(unit).padStart(2, "0")).join(":");
+}
+
+export function noteFileName(note, extension) {
+    for (const title of [note.shortTitle, note.title, "영상 핵심 노트"]) {
+        if (typeof title !== "string") continue;
+        const clean = title.normalize("NFC").replace(/[<>:"/\\|?*\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/gu, " ")
+            .replace(/\s+/gu, " ").trim();
+        const name = Array.from(clean).slice(0, 48).join("").replace(/^[. ]+|[. ]+$/gu, "");
+        if (!name) continue;
+        const reserved = /^(con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(?:\.|$)/iu.test(name);
+        return (reserved ? "_" : "") + name + "." + extension;
+    }
 }
 
 export function noteMarkdown(note, url) {
@@ -378,7 +392,7 @@ function startPage() {
         const file = new Blob([content], { type });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(file);
-        link.download = "영상-핵심-노트." + extension;
+        link.download = noteFileName(note, extension);
         link.click();
         setTimeout(() => URL.revokeObjectURL(link.href), 1000);
     }
