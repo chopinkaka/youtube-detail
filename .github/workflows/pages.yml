@@ -28,6 +28,7 @@ jobs:
       - name: Build the page and Windows ZIP
         env:
           PAGES_BASE_URL: ${{ steps.pages.outputs.base_url }}
+          CAPTION_SERVICE_URL: ${{ vars.CAPTION_SERVICE_URL }}
         run: python website/build_share.py --cards website/cards.html --base-url "$PAGES_BASE_URL"
       - uses: actions/upload-pages-artifact@v4
         with:

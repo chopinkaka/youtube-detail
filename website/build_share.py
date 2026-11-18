@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -16,13 +17,7 @@ DIST = KIT / "dist"
 APP_FILES = ("START.bat", "launch.py", "app.py", "core.py", "reader.py", "requirements.txt")
 PWA_FILES = ("app.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png")
 KOREA = timezone(timedelta(hours=9))
-SAMPLE = """<section id="sample" class="sample">
-    <div>
-      <h2>예시 카드</h2>
-      <p class="note">영상 정리 결과가 어떻게 보이는지 확인할 수 있습니다.</p>
-    </div>
-    <a href="cards.html?v=__CARDS_VERSION__">예시 카드 열기 →</a>
-  </section>"""
+SAMPLE = """<p id="sample" class="sample"><a href="cards.html?v=__CARDS_VERSION__">예시 카드 ↗</a></p>"""
 GUIDE = """영상 깊이 읽기 · Windows
 
 1. Python 3.11 이상을 설치합니다. https://www.python.org/downloads/windows/
@@ -40,7 +35,7 @@ GUIDE = """영상 깊이 읽기 · Windows
 """
 
 
-def make_release(cards: Path | None, base_url: str = "") -> dict:
+def make_release(cards: Path | None, base_url: str = "", caption_service: str = "") -> dict:
     sources = {name: (APP / name).read_bytes() for name in APP_FILES}
     sources["사용법.txt"] = GUIDE.encode("utf-8-sig")
     digest = hashlib.sha256()
@@ -64,6 +59,12 @@ def make_release(cards: Path | None, base_url: str = "") -> dict:
             raise ValueError("앱에서 저장한 ‘카드 저장 (.html)’ 파일을 선택하세요.")
 
     page = (KIT / "page-template.html").read_text(encoding="utf-8-sig")
+    if caption_service and not re.fullmatch(r"https://[A-Za-z0-9.-]+/api/captions", caption_service):
+        raise ValueError("자막 서비스는 HTTPS의 /api/captions 주소를 사용해야 합니다.")
+    caption_origin = caption_service.removesuffix("/api/captions")
+    page = page.replace("__CAPTION_CONNECT__", " " + caption_origin if caption_origin else "")
+    caption_meta = f'<meta name="caption-service" content="{caption_service}">' if caption_service else ""
+    page = page.replace("__CAPTION_META__", caption_meta)
     web_script = (KIT / "web-app.mjs").read_bytes()
     web_version = hashlib.sha256(web_script).hexdigest()[:10]
     page = page.replace("__WEB_VERSION__", web_version)
@@ -113,7 +114,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="친구에게 보여줄 최신 프로그램과 카드 파일을 묶습니다.")
     parser.add_argument("--cards", type=Path, help="공유할 카드 HTML. 생략하면 기존 공개용 카드를 유지합니다.")
     parser.add_argument("--base-url", default="")
+    parser.add_argument("--caption-service", default=os.environ.get("CAPTION_SERVICE_URL", ""))
     args = parser.parse_args()
-    info = make_release(args.cards, args.base_url)
+    info = make_release(args.cards, args.base_url, args.caption_service)
     print(f"공유 파일 준비 완료: {DIST}")
     print(f"프로그램 버전: {info['version']} · {info['date']}")
