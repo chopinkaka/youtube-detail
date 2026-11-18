@@ -151,6 +151,9 @@ function startPage() {
     const run = byId("run");
     const result = byId("result");
     const reading = byId("reading");
+    const workbench = byId("workbench");
+    const deck = byId("deck");
+    const slide = byId("slide");
     let note, source, mode = "note", card = 0;
 
     function element(tag, value, css) {
@@ -160,9 +163,9 @@ function startPage() {
         return node;
     }
 
-    function sectionView(section) {
+    function sectionView(section, showTitle = true) {
         const topic = element("article", "", "topic");
-        topic.append(element("h3", section.title));
+        if (showTitle) topic.append(element("h3", section.title));
         for (const point of section.points) {
             const block = element("div", "", "point");
             block.append(element("strong", point.heading), element("p", point.body));
@@ -178,29 +181,83 @@ function startPage() {
         return topic;
     }
 
-    function render() {
+
+    function renderNote() {
         byId("result-title").textContent = note.title;
-        byId("notes").setAttribute("aria-pressed", mode === "note");
-        byId("cards").setAttribute("aria-pressed", mode === "card");
-        const content = [];
-        if (mode === "note" || card === 0) {
-            content.push(element("p", note.takeaway, "takeaway"));
-            if (note.caveat) content.push(element("p", note.caveat, "note"));
-        }
-        if (mode === "note") content.push(...note.sections.map(sectionView));
-        else if (card > 0) content.push(sectionView(note.sections[card - 1]));
-        reading.replaceChildren(...content);
-        byId("pager").hidden = mode !== "card";
-        byId("prev").disabled = card === 0;
-        byId("next").disabled = card === note.sections.length;
-        byId("card-number").textContent = `${card + 1} / ${note.sections.length + 1}`;
+        const content = [element("p", note.takeaway, "takeaway")];
+        if (note.caveat) content.push(element("p", note.caveat, "note"));
+        reading.replaceChildren(...content, ...note.sections.map(section => sectionView(section)));
         result.hidden = false;
+        const sample = byId("sample");
+        if (sample) sample.hidden = true;
     }
 
-    byId("notes").onclick = () => { mode = "note"; render(); };
-    byId("cards").onclick = () => { mode = "card"; card = 0; render(); };
-    byId("prev").onclick = () => { if (card > 0) { card--; render(); } };
-    byId("next").onclick = () => { if (card < note.sections.length) { card++; render(); } };
+    function renderCard() {
+        const cover = card === 0;
+        const section = cover ? null : note.sections[card - 1];
+        const title = element("h2", cover ? note.title : section.title, "deck-title");
+        title.id = "slide-title";
+        title.tabIndex = -1;
+        const kicker = element("p", cover ? "영상 깊이 읽기" : String(card).padStart(2, "0"), "deck-kicker");
+        const content = [kicker, title];
+        if (cover) {
+            content.push(element("p", note.takeaway, "deck-lead"));
+            if (note.caveat) content.push(element("p", note.caveat, "note"));
+        } else {
+            content.push(sectionView(section, false));
+        }
+        slide.classList.toggle("deck-cover", cover);
+        slide.replaceChildren(...content);
+        byId("prev").disabled = cover;
+        byId("next").disabled = card === note.sections.length;
+        byId("card-number").textContent = `${card + 1} / ${note.sections.length + 1}`;
+        return title;
+    }
+
+    function setView(nextView, scrollToResult = true) {
+        if (!note) return;
+        mode = nextView;
+        const presenting = mode === "card";
+        workbench.hidden = presenting;
+        deck.hidden = !presenting;
+        document.body.classList.toggle("presenting", presenting);
+        if (presenting) {
+            const heading = renderCard();
+            window.scrollTo(0, 0);
+            heading.focus({ preventScroll: true });
+        } else {
+            renderNote();
+            if (scrollToResult) {
+                result.scrollIntoView({ block: "start" });
+                byId("result-title").focus({ preventScroll: true });
+            }
+        }
+    }
+
+    function changeCard(direction) {
+        if (mode !== "card") return;
+        const next = card + direction;
+        if (next < 0 || next > note.sections.length) return;
+        card = next;
+        window.scrollTo(0, 0);
+        renderCard().focus({ preventScroll: true });
+    }
+
+    byId("notes").onclick = () => setView("note");
+    byId("cards").onclick = () => setView("card");
+    byId("back").onclick = () => {
+        setView("note", false);
+        byId("youtube").focus();
+    };
+    byId("prev").onclick = () => changeCard(-1);
+    byId("next").onclick = () => changeCard(1);
+    document.addEventListener("keydown", event => {
+        if (mode !== "card" || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+        if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+            event.preventDefault();
+            changeCard(event.key === "ArrowLeft" ? -1 : 1);
+        }
+    });
     byId("save").onclick = () => {
         const file = new Blob([noteMarkdown(note, source)], { type: "text/markdown;charset=utf-8" });
         const link = document.createElement("a");
@@ -218,16 +275,15 @@ function startPage() {
             const video = normalizeYouTube(byId("youtube").value);
             const key = byId("key").value.trim();
             if (!key) throw new Error("내 Gemini API 키를 입력하세요.");
+            const selectedView = new FormData(form).get("view") === "card" ? "card" : "note";
             run.disabled = true;
             status.textContent = "Gemini가 영상의 핵심과 근거를 정리하고 있습니다.";
             const updated = await analyzeVideo(video, key, byId("length").value, byId("focus").value.trim());
             note = updated;
             source = video;
             card = 0;
-            mode = "note";
-            render();
-            status.textContent = "핵심 노트가 준비됐습니다.";
-            result.scrollIntoView({ block: "start" });
+            status.textContent = "영상 정리가 완료됐습니다.";
+            setView(selectedView);
         } catch (error) {
             status.dataset.error = "";
             status.textContent = error.name === "TimeoutError"

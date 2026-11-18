@@ -15,12 +15,12 @@ APP = KIT.parent
 DIST = KIT / "dist"
 APP_FILES = ("START.bat", "launch.py", "app.py", "core.py", "reader.py", "requirements.txt")
 KOREA = timezone(timedelta(hours=9))
-SAMPLE = """<section class="sample">
+SAMPLE = """<section id="sample" class="sample">
     <div>
-      <h2>공유 카드 보기</h2>
-      <p class="note">선택한 영상의 핵심 정리를 브라우저에서 넘겨볼 수 있습니다.</p>
+      <h2>예시 카드</h2>
+      <p class="note">영상 정리 결과가 어떻게 보이는지 확인할 수 있습니다.</p>
     </div>
-    <a href="cards.html?v=__CARDS_VERSION__">카드 열기 →</a>
+    <a href="cards.html?v=__CARDS_VERSION__">예시 카드 열기 →</a>
   </section>"""
 GUIDE = """영상 깊이 읽기 · Windows
 

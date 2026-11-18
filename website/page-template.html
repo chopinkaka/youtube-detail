@@ -19,6 +19,9 @@ form,.result{background:#fff;border:1px solid var(--line);padding:26px;border-ra
 .field{display:block;margin:14px 0 0}.field>span{display:block;font-weight:700;margin-bottom:5px}
 input,select{min-width:0;width:100%;padding:10px 12px;background:#fff;border:1px solid #a6bbad;border-radius:8px;color:var(--ink);font:inherit}
 .controls{display:grid;grid-template-columns:1fr 1.5fr;gap:12px}
+.formats{border:0;padding:0;margin:14px 0 0}.formats legend{font-weight:700;margin-bottom:5px}
+.format-options{display:flex;gap:8px}.format-options label{display:flex;align-items:center;gap:8px;flex:1;cursor:pointer;border:1px solid #a6bbad;border-radius:8px;padding:8px 12px}
+.format-options label:has(:checked){background:#e9f3eb;border-color:var(--green);font-weight:700}.format-options input{width:auto;accent-color:var(--green)}
 button{cursor:pointer;background:var(--green);color:#fff;border:1px solid var(--green);border-radius:9px;padding:9px 15px;font:inherit;font-weight:700}
 button:disabled{opacity:.48;cursor:default}button.secondary{background:white;color:var(--green)}
 a{color:var(--green);text-underline-offset:3px}a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #b27322;outline-offset:3px}
@@ -26,22 +29,37 @@ a{color:var(--green);text-underline-offset:3px}a:focus-visible,button:focus-visi
 #status{margin:12px 0 0;font-weight:600}#status:empty{display:none}#status[data-error]{color:#962722}
 .sample{margin-top:40px;border-top:1px solid var(--line);padding-top:22px;display:flex;justify-content:space-between;align-items:center;gap:16px}
 .result{margin-top:28px}.result-header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
-.result-header>div,.pager{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.takeaway{background:#e9f3eb;padding:14px 16px;border-radius:10px}
-.topic{padding:18px 0;border-bottom:1px solid var(--line)}.topic:last-child{border-bottom:0}.topic h3{margin-bottom:10px}.point{margin-top:10px}.point>p{margin-top:3px}.pager{justify-content:center;margin-top:16px}.result a{overflow-wrap:anywhere}
+.result-header>div{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.takeaway{background:#e9f3eb;padding:14px 16px;border-radius:10px}
+.topic{padding:18px 0;border-bottom:1px solid var(--line)}.topic:last-child{border-bottom:0}.topic h3{margin-bottom:10px}.point{margin-top:10px}.point>p{margin-top:3px}.result a{overflow-wrap:anywhere}
+body.presenting{background:#edf1f5}
+.deck{width:min(1060px,100% - 36px);margin:0 auto;padding:22px 0 36px;color:#172a38}
+.deck-tools{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px}
+.deck-tools button{padding:6px 12px;background:#fff;color:#176c66;border-color:#a8c5c5;font-size:14px}
+.deck-slide{background:#fff;border-radius:24px;box-shadow:0 10px 40px #20304010;min-height:650px;padding:48px 64px;overflow-wrap:anywhere}
+.deck-kicker{color:#157f78;letter-spacing:.10em;font-weight:700;margin-bottom:8px}
+.deck-title{font-size:clamp(26px,4vw,42px);letter-spacing:-.045em;line-height:1.35}
+.deck-cover .deck-title{margin-top:76px}
+.deck-lead{font-size:clamp(17px,2.5vw,24px);line-height:1.75;margin:26px 0}
+.deck-slide .topic{border:0;padding-top:10px}
+.deck-slide .point{border-left:3px solid #c8e2df;padding-left:20px;margin:20px 0;font-size:clamp(16px,2vw,18px)}
+.deck-slide .point strong{font-size:1.12em}.deck-slide .stamp{display:inline-block;margin-top:6px}
+.deck-pager{display:flex;justify-content:center;align-items:center;gap:24px;margin-top:30px}
+.deck-pager button{background:#176c66;border-color:#176c66;padding:9px 20px;border-radius:12px}
+@media(max-width:700px){.deck-slide{min-height:58vh;padding:26px 23px}.deck-cover .deck-title{margin-top:35px}.deck-pager{gap:14px;margin-top:18px}}
 footer{margin-top:34px;border-top:1px solid var(--line);padding-top:16px}summary{cursor:pointer;color:var(--green);font-weight:700}
 @media(max-width:760px){main{width:calc(100% - 32px);padding:34px 0}.hero{grid-template-columns:1fr;gap:22px}.intro{padding-top:0}form,.result{padding:18px}.lead{font-size:17px;margin:10px 0 0}.controls{grid-template-columns:1fr}.sample{align-items:flex-start;flex-direction:column}}
 </style>
 <script type="module" src="web-app.mjs?v=__WEB_VERSION__"></script>
 </head>
 <body>
-<main>
+<main id="workbench">
   <div class="hero">
     <header class="intro">
       <h1>영상 깊이 읽기</h1>
       <p class="lead">유튜브 영상의 주장, 근거, 수치와 조건을 모아 핵심 노트와 카드로 읽습니다. 원문이 궁금한 대목은 영상의 해당 시각으로 이동할 수 있습니다.</p>
     </header>
     <form id="analysis" method="post" autocomplete="off">
-      <h2>영상 정리하기</h2>
+      <h2>영상과 결과 형식 선택</h2>
       <label class="field"><span>공개 유튜브 주소</span><input id="youtube" type="url" required maxlength="2048" placeholder="https://www.youtube.com/watch?v=…"></label>
       <label class="field"><span>내 Gemini API 키</span><input id="key" type="password" required maxlength="256" autocomplete="off" spellcheck="false" placeholder="분석할 때 Google에 직접 전달"></label>
       <p class="note"><a href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener noreferrer">Google AI Studio에서 키 만들기</a> · 이 페이지에서는 키를 저장하지 않습니다.</p>
@@ -49,26 +67,27 @@ footer{margin-top:34px;border-top:1px solid var(--line);padding-top:16px}summary
         <label class="field"><span>읽을 분량</span><select id="length"><option>간결하게</option><option selected>균형 있게</option><option>자세히</option></select></label>
         <label class="field"><span>관심 주제 (선택)</span><input id="focus" maxlength="300" placeholder="예: 실제 훈련 방법과 수치"></label>
       </div>
-      <button id="run" type="submit">핵심 노트 만들기</button>
+      <fieldset class="formats">
+        <legend>결과 형식</legend>
+        <div class="format-options">
+          <label><input type="radio" name="view" value="note" checked> 노트</label>
+          <label><input type="radio" name="view" value="card"> 카드</label>
+        </div>
+      </fieldset>
+      <button id="run" type="submit">영상 정리하기</button>
       <p class="note">영상 주소와 관심 주제를 Gemini에 보냅니다. 무료로 이용하려면 Free Tier 프로젝트의 키를 사용하세요.</p>
       <p id="status" role="status" aria-live="polite"></p>
     </form>
   </div>
   <section id="result" class="result" hidden aria-labelledby="result-title">
     <div class="result-header">
-      <h2 id="result-title"></h2>
+      <h2 id="result-title" tabindex="-1"></h2>
       <div aria-label="보기와 저장">
-        <button type="button" id="notes" class="secondary" aria-pressed="true">노트</button>
-        <button type="button" id="cards" class="secondary" aria-pressed="false">카드</button>
+        <button type="button" id="cards" class="secondary">카드로 보기</button>
         <button type="button" id="save" class="secondary">노트 저장</button>
       </div>
     </div>
     <div id="reading"></div>
-    <div class="pager" id="pager" hidden aria-label="카드 이동">
-      <button type="button" id="prev" class="secondary">이전</button>
-      <span id="card-number" aria-live="polite"></span>
-      <button type="button" id="next" class="secondary">다음</button>
-    </div>
   </section>
   __SAMPLE__
   <footer>
@@ -79,6 +98,18 @@ footer{margin-top:34px;border-top:1px solid var(--line);padding-top:16px}summary
     </details>
     <noscript><p>브라우저에서 영상 정리를 하려면 JavaScript를 켜세요.</p></noscript>
   </footer>
+</main>
+<main id="deck" class="deck" hidden aria-label="영상 요약 카드">
+  <div class="deck-tools">
+    <button type="button" id="back">입력으로 돌아가기</button>
+    <button type="button" id="notes">노트로 보기</button>
+  </div>
+  <article id="slide" class="deck-slide" aria-labelledby="slide-title"></article>
+  <nav class="deck-pager" aria-label="카드 이동">
+    <button type="button" id="prev">← 이전</button>
+    <span id="card-number" aria-live="polite"></span>
+    <button type="button" id="next">다음 →</button>
+  </nav>
 </main>
 </body>
 </html>
