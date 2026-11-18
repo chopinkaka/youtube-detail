@@ -17,7 +17,7 @@ h2{font-size:24px;letter-spacing:-.04em}h3{font-size:18px}.intro{padding-top:20p
 .lead{max-width:28em;margin:20px 0 24px;font-size:20px;color:var(--muted)}
 form,.result{background:#fff;border:1px solid var(--line);padding:26px;border-radius:22px}
 .field{display:block;margin:14px 0 0}.field>span{display:block;font-weight:700;margin-bottom:5px}
-input,select{min-width:0;width:100%;padding:10px 12px;background:#fff;border:1px solid #a6bbad;border-radius:8px;color:var(--ink);font:inherit}
+input,select,textarea{min-width:0;width:100%;padding:10px 12px;background:#fff;border:1px solid #a6bbad;border-radius:8px;color:var(--ink);font:inherit}
 .controls{display:grid;grid-template-columns:1fr 1.5fr;gap:12px}
 .formats{border:0;padding:0;margin:14px 0 0}.formats legend{font-weight:700;margin-bottom:5px}
 .format-options{display:flex;gap:8px}.format-options label{display:flex;align-items:center;gap:8px;flex:1;cursor:pointer;border:1px solid #a6bbad;border-radius:8px;padding:8px 12px}
@@ -90,6 +90,11 @@ footer{margin-top:34px;border-top:1px solid var(--line);padding-top:16px}summary
       <button id="run" type="submit">영상 정리하기</button>
       <p class="note">영상 주소와 관심 주제를 Gemini에 보냅니다. 무료로 이용하려면 Free Tier 프로젝트의 키를 사용하세요.</p>
       <p id="status" role="status" aria-live="polite"></p>
+      <details id="transcript-panel" class="note">
+        <summary>대본으로 정리하기</summary>
+        <label class="field"><span>유튜브 스크립트 또는 직접 만든 대본</span><textarea id="transcript" rows="5" aria-describedby="transcript-help"></textarea></label>
+        <p id="transcript-help">영상 설명에서 ‘스크립트 표시’를 열어 복사한 뒤 ‘영상 정리하기’를 누르세요. 시각도 함께 붙여 넣으면 원본으로 이동할 수 있습니다. 대본을 입력하면 그 텍스트를 Gemini에 보냅니다.</p>
+      </details>
     </form>
   </div>
   <section id="result" class="result" hidden aria-labelledby="result-title">
