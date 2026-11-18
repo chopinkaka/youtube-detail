@@ -35,6 +35,7 @@ a{color:var(--green);text-underline-offset:3px}a:focus-visible,button:focus-visi
 .result{margin-top:28px}.result-header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
 .result-header>div{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.takeaway{background:#e9f3eb;padding:14px 16px;border-radius:10px}
 .topic{padding:18px 0;border-bottom:1px solid var(--line)}.topic:last-child{border-bottom:0}.topic h3{margin-bottom:10px}.point{margin-top:10px}.point>p{margin-top:3px}.result a{overflow-wrap:anywhere}
+#transcript-body p{margin:10px 0;overflow-wrap:anywhere}#transcript-body .stamp{margin-right:6px}#generate-transcript{margin:12px 0}
 body.presenting{background:#edf1f5}
 .deck{width:min(1060px,100% - 36px);margin:0 auto;padding:22px 0 36px;color:#172a38}
 .deck-tools{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px}
@@ -101,6 +102,7 @@ footer{margin-top:34px;border-top:1px solid var(--line);padding-top:16px}summary
     <div class="result-header">
       <h2 id="result-title" tabindex="-1"></h2>
       <div aria-label="보기와 저장">
+        <button type="button" id="open-transcript" class="secondary">전체 대본 보기</button>
         <button type="button" id="cards" class="secondary">카드로 보기</button>
         <button type="button" id="save" class="secondary">HTML로 저장</button>
         <button type="button" id="save-markdown" class="secondary">Markdown으로 저장</button>
@@ -108,11 +110,24 @@ footer{margin-top:34px;border-top:1px solid var(--line);padding-top:16px}summary
     </div>
     <div id="reading"></div>
   </section>
+  <section id="full-transcript" class="result" hidden aria-labelledby="transcript-heading">
+    <div class="result-header">
+      <h2 id="transcript-heading" tabindex="-1">전체 대본</h2>
+      <button type="button" id="close-transcript" class="secondary">노트로 돌아가기</button>
+    </div>
+    <p class="note" id="transcript-status" role="status"></p>
+    <button type="button" id="generate-transcript">Gemini로 음성 인식하기</button>
+    <details id="paste-details" class="note"><summary>가지고 있는 대본으로 열기</summary>
+      <label class="field"><span>유튜브 스크립트 또는 대본</span><textarea id="result-transcript-input" rows="5"></textarea></label>
+      <button type="button" id="use-transcript" class="secondary">입력한 대본 보기</button>
+    </details>
+    <div id="transcript-body"></div>
+  </section>
   __SAMPLE__
   <footer>
     <details>
       <summary>Windows에서 음성 파일과 전체 대본 처리</summary>
-      <p class="note">PC에서 직접 음성 인식을 하려면 Windows 버전을 사용할 수 있습니다. Python 3.11 이상이 필요합니다.</p>
+      <p class="note">PC에서 직접 음성 인식을 하려면 Windows 버전을 사용할 수 있습니다. Python 3.11 이상이 필요합니다. 압축을 풀고 START.bat를 실행하면 브라우저에서 열립니다.</p>
       <p><a href="youtube-detail-windows.zip?v=__APP_VERSION__" download>Windows 프로그램 받기</a> <span class="note">· __APP_DATE__</span></p>
     </details>
     <noscript><p>브라우저에서 영상 정리를 하려면 JavaScript를 켜세요.</p></noscript>
@@ -121,6 +136,7 @@ footer{margin-top:34px;border-top:1px solid var(--line);padding-top:16px}summary
 <main id="deck" class="deck" hidden aria-label="영상 요약 카드">
   <div class="deck-tools">
     <button type="button" id="back">입력으로 돌아가기</button>
+    <button type="button" id="deck-transcript">전체 대본 보기</button>
     <button type="button" id="notes">노트로 보기</button>
   </div>
   <article id="slide" class="deck-slide" aria-labelledby="slide-title"></article>

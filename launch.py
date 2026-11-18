@@ -6,8 +6,11 @@ import io
 import json
 import os
 import re
+import socket
 import subprocess
 import sys
+import time
+import webbrowser
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from urllib.parse import urlsplit
@@ -122,12 +125,37 @@ def run() -> int:
     if python is None:
         python = prepare_python(app)
     env = dict(os.environ, YOUTUBE_DETAIL_DATA_DIR=str(ROOT / "data"))
+    # Multiple installed copies can run independently with their own data folders.
+    with socket.socket() as probe:
+        try:
+            probe.bind(("127.0.0.1", 8517))
+        except OSError:
+            probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    address = f"http://127.0.0.1:{port}"
+    print(f"브라우저에서 프로그램을 엽니다. 직접 열 주소는 {address} 입니다.", flush=True)
     args = [
         str(python), "-m", "streamlit", "run", str(app / "app.py"),
-        "--server.address", "127.0.0.1", "--server.port", "8517",
+        "--server.address", "127.0.0.1", "--server.port", str(port), "--server.headless", "true",
         "--server.maxUploadSize", "1024", "--browser.gatherUsageStats", "false",
     ]
-    return subprocess.run(args, cwd=ROOT, env=env).returncode
+    with subprocess.Popen(args, cwd=ROOT, env=env) as server:
+        try:
+            while server.poll() is None:
+                try:
+                    with urlopen(address + "/_stcore/health", timeout=1) as health:
+                        if health.read(16).strip() == b"ok":
+                            atomic_write(cache / "port", str(port))
+                            webbrowser.open(address)
+                            break
+                except OSError:
+                    pass
+                time.sleep(0.3)
+            return server.wait()
+        finally:
+            (cache / "port").unlink(missing_ok=True)
+            if server.poll() is None:
+                server.terminate()
 
 
 if __name__ == "__main__":
@@ -140,6 +168,12 @@ if __name__ == "__main__":
         try:
             msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
         except OSError:
-            print("프로그램이 이미 실행 중입니다.")
+            try:
+                port = int((ROOT / ".updates" / "port").read_text(encoding="utf-8"))
+                if 0 < port < 65536:
+                    webbrowser.open(f"http://127.0.0.1:{port}")
+            except (OSError, ValueError):
+                pass
+            print("프로그램이 시작 중이거나 이미 실행 중입니다. 실행한 창에서 주소를 확인하세요.")
             raise SystemExit(0)
         raise SystemExit(run())
