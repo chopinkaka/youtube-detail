@@ -465,7 +465,8 @@ function startPage() {
     const slide = byId("slide");
     const tabs = Array.from(document.querySelectorAll("[data-tab]"));
     const panels = Array.from(document.querySelectorAll("[data-panel]"));
-    let video, note, transcript, busy = false, tab = "home", card = 0;
+    const viewButtons = Array.from(document.querySelectorAll("[data-result-view]"));
+    let video, note, transcript, busy = false, tab = "home", resultView = "note", card = 0;
 
     const keyInput = byId("key");
     const rememberKey = byId("remember-key");
@@ -537,7 +538,6 @@ function startPage() {
             else button.removeAttribute("aria-current");
         }
         if (tab === "library") refreshLibrary();
-        if (tab === "cards" && note) renderCard();
         window.scrollTo(0, 0);
     }
 
@@ -570,13 +570,23 @@ function startPage() {
         return topic;
     }
 
-    function renderResults() {
-        for (const panel of ["notes", "cards"]) {
-            byId("empty-" + panel).hidden = Boolean(note);
-            byId("empty-" + panel + "-info").hidden = Boolean(note);
+    function setResultView(view) {
+        resultView = view;
+        for (const button of viewButtons) {
+            button.setAttribute("aria-pressed", String(button.dataset.resultView === view));
         }
-        byId("note-content").hidden = !note;
-        byId("deck-content").hidden = !note;
+        byId("note-content").hidden = !note || view !== "note";
+        byId("deck-content").hidden = !note || view !== "card";
+        if (note && view === "card") renderCard();
+    }
+
+    for (const button of viewButtons) {
+        button.onclick = () => setResultView(button.dataset.resultView);
+    }
+
+    function renderResults() {
+        byId("empty-results").hidden = Boolean(note);
+        setResultView(resultView);
         const sample = byId("sample");
         if (sample) sample.hidden = Boolean(note);
         if (!note) return;
@@ -584,7 +594,6 @@ function startPage() {
         const content = [element("p", note.takeaway, "takeaway")];
         if (note.caveat) content.push(element("p", note.caveat, "note"));
         byId("reading").replaceChildren(...content, ...note.sections.map(section => sectionView(section)));
-        if (tab === "cards") renderCard();
     }
 
     function renderCard() {
@@ -610,7 +619,7 @@ function startPage() {
     }
 
     function changeCard(direction) {
-        if (tab !== "cards" || !note) return;
+        if (tab !== "results" || resultView !== "card" || !note) return;
         const next = card + direction;
         if (next < 0 || next > note.sections.length) return;
         card = next;
@@ -621,7 +630,8 @@ function startPage() {
     byId("prev").onclick = () => changeCard(-1);
     byId("next").onclick = () => changeCard(1);
     document.addEventListener("keydown", event => {
-        if (tab !== "cards" || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+        if (tab !== "results" || resultView !== "card" || !note
+            || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
         if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
             event.preventDefault();
             changeCard(event.key === "ArrowLeft" ? -1 : 1);
@@ -806,7 +816,7 @@ function startPage() {
             rememberSuccessfulKey(key);
             card = 0;
             renderResults();
-            if (tab === "home" || fromPaste) navigate("notes");
+            if (tab === "home" || fromPaste) navigate("results");
             message(transcript.content ? "" : "노트가 준비됐습니다. 대본 탭에서 전사를 다시 시도할 수 있습니다.");
         } catch (error) {
             if (!summarize && keyInput !== document.activeElement) {
@@ -881,7 +891,7 @@ function startPage() {
                     transcript = { content: null, chunks: [], duration: null, estimated: false, checked: false };
                     showTranscript(entry.transcript?.text || "", entry.transcript?.origin || "저장된 대본이 없습니다.", Boolean(entry.transcript));
                     renderResults();
-                    navigate(note ? "notes" : "transcript");
+                    navigate(note ? "results" : "transcript");
                     message("");
                 };
                 const remove = element("button", "삭제", "secondary");
