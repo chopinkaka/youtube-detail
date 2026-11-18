@@ -19,16 +19,19 @@ def save_json(path, data):
 
 
 def youtube_url(value):
-    u = urlparse(value.strip())
-    if u.scheme != 'https' or u.username or u.password or u.port:
-        raise ValueError('https://로 시작하는 유튜브 영상 링크를 입력하세요.')
-    host = (u.hostname or '').lower()
+    address = value.strip()
+    if not re.match(r'[a-z][a-z0-9+.-]*:', address, re.I):
+        address = 'https:' + ('' if address.startswith('//') else '//') + address
+    u = urlparse(address)
+    host = u.hostname or ''
+    if u.scheme != 'https' or u.netloc.lower() != host:
+        raise ValueError('공개 유튜브 영상 주소를 입력하세요.')
     if host == 'youtu.be':
         video_id = u.path.strip('/')
     elif host in {'youtube.com', 'www.youtube.com', 'm.youtube.com'}:
         if u.path == '/watch':
             video_id = parse_qs(u.query).get('v', [''])[0]
-        elif u.path.startswith(('/shorts/', '/live/')):
+        elif re.fullmatch(r'/(?:shorts|live|embed)/[A-Za-z0-9_-]{11}/?', u.path):
             video_id = u.path.split('/')[2]
         else:
             video_id = ''

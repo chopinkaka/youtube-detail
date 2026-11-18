@@ -65,7 +65,7 @@ footer{margin-top:34px;border-top:1px solid var(--line);padding-top:16px}summary
     </header>
     <form id="analysis" method="post" autocomplete="off">
       <h2>영상과 결과 형식 선택</h2>
-      <label class="field"><span>공개 유튜브 주소</span><input id="youtube" type="url" required maxlength="2048" placeholder="https://www.youtube.com/watch?v=…"></label>
+      <label class="field"><span>공개 유튜브 주소</span><input id="youtube" type="text" inputmode="url" autocapitalize="off" spellcheck="false" required maxlength="2048" placeholder="youtube.com/watch?v=… 또는 youtu.be/…"></label>
       <div id="key-entry">
         <label class="field"><span>내 Gemini API 키</span><input id="key" type="password" required maxlength="256" autocomplete="off" spellcheck="false" placeholder="분석할 때 Google에 직접 전달"></label>
         <label class="remember"><input id="remember-key" type="checkbox" aria-describedby="remember-help"> 이 브라우저에 키 저장</label>

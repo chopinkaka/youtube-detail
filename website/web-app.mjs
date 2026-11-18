@@ -45,7 +45,11 @@ export function normalizeYouTube(value) {
     const error = "공개 유튜브의 동영상 주소를 입력하세요.";
     let url;
     try {
-        url = new URL(value.trim());
+        const address = value.trim();
+        const absolute = /^[a-z][a-z\d+.-]*:/i.test(address)
+            ? address
+            : "https:" + (address.startsWith("//") ? "" : "//") + address;
+        url = new URL(absolute);
     } catch {
         throw new Error(error);
     }
