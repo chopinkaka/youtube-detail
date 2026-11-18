@@ -14,6 +14,7 @@ KIT = Path(__file__).resolve().parent
 APP = KIT.parent
 DIST = KIT / "dist"
 APP_FILES = ("START.bat", "launch.py", "app.py", "core.py", "reader.py", "requirements.txt")
+PWA_FILES = ("app.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png")
 KOREA = timezone(timedelta(hours=9))
 SAMPLE = """<section id="sample" class="sample">
     <div>
@@ -64,7 +65,8 @@ def make_release(cards: Path | None, base_url: str = "") -> dict:
 
     page = (KIT / "page-template.html").read_text(encoding="utf-8-sig")
     web_script = (KIT / "web-app.mjs").read_bytes()
-    page = page.replace("__WEB_VERSION__", hashlib.sha256(web_script).hexdigest()[:10])
+    web_version = hashlib.sha256(web_script).hexdigest()[:10]
+    page = page.replace("__WEB_VERSION__", web_version)
     if cards_bytes is None:
         page = page.replace("__SAMPLE__", "")
     else:
@@ -72,6 +74,17 @@ def make_release(cards: Path | None, base_url: str = "") -> dict:
         page = page.replace("__SAMPLE__", SAMPLE.replace("__CARDS_VERSION__", cards_version))
 
     page = page.replace("__APP_VERSION__", version).replace("__APP_DATE__", released)
+    app_shell = {name: (KIT / name).read_bytes() for name in PWA_FILES}
+    app_shell.update({"index.html": page.encode("utf-8"), f"web-app.mjs?v={web_version}": web_script})
+    if cards_bytes is not None:
+        app_shell[f"cards.html?v={cards_version}"] = cards_bytes
+    worker = (KIT / "sw-template.js").read_text(encoding="utf-8")
+    shell_digest = hashlib.sha256(worker.encode("utf-8"))
+    for name, content in app_shell.items():
+        shell_digest.update(name.encode("utf-8"))
+        shell_digest.update(hashlib.sha256(content).digest())
+    worker = worker.replace("__SHELL_VERSION__", shell_digest.hexdigest()[:12])
+    worker = worker.replace("__SHELL_FILES__", json.dumps(list(app_shell)))
     info = {"version": version, "date": released, "cards": cards_bytes is not None}
     sources["release-config.json"] = json.dumps({"version": version, "base_url": base_url.rstrip("/")}).encode("utf-8")
     with TemporaryDirectory(dir=KIT) as directory:
@@ -85,7 +98,11 @@ def make_release(cards: Path | None, base_url: str = "") -> dict:
         (staging / "web-app.mjs").write_bytes(web_script)
         (staging / "index.html").write_text(page, encoding="utf-8")
         (staging / "release.json").write_text(json.dumps(info, indent=2) + "\n", encoding="utf-8")
-        for name in ("youtube-detail-windows.zip", "cards.html", "web-app.mjs", "release.json", "index.html"):
+        for name in PWA_FILES:
+            (staging / name).write_bytes(app_shell[name])
+        (staging / "sw.js").write_text(worker, encoding="utf-8")
+        for name in ("youtube-detail-windows.zip", "cards.html", "web-app.mjs", "release.json",
+                     *PWA_FILES, "sw.js", "index.html"):
             file = staging / name
             if file.exists():
                 os.replace(file, DIST / name)

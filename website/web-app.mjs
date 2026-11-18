@@ -287,6 +287,61 @@ function readKey() {
     }
 }
 
+function setupInstall() {
+    const install = document.getElementById("install-app");
+    const offline = document.getElementById("offline-status");
+    let prompt;
+    const updateConnection = () => { offline.hidden = navigator.onLine; };
+    updateConnection();
+    window.addEventListener("online", updateConnection);
+    window.addEventListener("offline", updateConnection);
+
+    window.addEventListener("beforeinstallprompt", event => {
+        event.preventDefault();
+        prompt = event;
+        install.hidden = false;
+    });
+    install.onclick = async () => {
+        if (!prompt) return;
+        const current = prompt;
+        prompt = null;
+        install.hidden = true;
+        try {
+            await current.prompt();
+        } catch {
+            // The browser menu remains available if the install dialog could not open.
+        }
+    };
+    window.addEventListener("appinstalled", () => {
+        prompt = null;
+        install.hidden = true;
+    });
+    if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register(new URL("./sw.js", import.meta.url)).catch(error => {
+            console.warn("Offline app registration failed", error);
+        });
+    }
+}
+
+let libraryDatabase;
+async function libraryStore(mode, operation) {
+    if (!libraryDatabase) {
+        libraryDatabase = new Promise((resolve, reject) => {
+            const request = indexedDB.open("videodeepread:" + new URL(".", import.meta.url).pathname, 1);
+            request.onupgradeneeded = () => request.result.createObjectStore("videos", { keyPath: "video" });
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+    }
+    const database = await libraryDatabase;
+    return new Promise((resolve, reject) => {
+        const transaction = database.transaction("videos", mode);
+        const request = operation(transaction.objectStore("videos"));
+        transaction.oncomplete = () => resolve(request.result);
+        transaction.onabort = () => reject(transaction.error);
+    });
+}
+
 function startPage() {
     const byId = id => document.getElementById(id);
     const form = byId("analysis");
@@ -466,12 +521,46 @@ function startPage() {
     const preview = byId("preview-transcript");
     let transcriptState, transcriptOpener;
 
+    const query = byId("transcript-query");
+    const matchStatus = byId("transcript-match");
+    let matchIndex = -1;
+
+    function resetSearch() {
+        matchIndex = -1;
+        transcriptBody.querySelector(".match")?.classList.remove("match");
+        matchStatus.textContent = "";
+    }
+
+    function findTranscript() {
+        const term = query.value.trim().toLocaleLowerCase();
+        if (!term) return;
+        const matches = Array.from(transcriptBody.children).filter(block =>
+            Array.from(block.querySelectorAll("p")).some(line => line.textContent.toLocaleLowerCase().includes(term)));
+        transcriptBody.querySelector(".match")?.classList.remove("match");
+        if (!matches.length) {
+            matchStatus.textContent = "검색 결과 없음";
+            return;
+        }
+        matchIndex = (matchIndex + 1) % matches.length;
+        matches[matchIndex].classList.add("match");
+        matches[matchIndex].scrollIntoView({ block: "nearest" });
+        matchStatus.textContent = `${matchIndex + 1} / ${matches.length}`;
+    }
+
+    query.oninput = resetSearch;
+    query.onkeydown = event => { if (event.key === "Enter") findTranscript(); };
+    byId("transcript-next").onclick = findTranscript;
+
     function prepareTranscript(video) {
         transcriptState = { video, hasText: false };
         byId("caption-source").href = video;
         generate.hidden = false;
         generate.disabled = false;
         transcriptBody.replaceChildren();
+        byId("save-transcript-offline").hidden = true;
+        byId("search-transcript").hidden = true;
+        query.value = "";
+        resetSearch();
         paste.value = "";
         byId("paste-details").open = false;
         transcriptStatus.textContent = "붙여 넣은 대본은 바로 볼 수 있습니다. Gemini 음성 인식에는 API 키와 사용량이 필요합니다.";
@@ -493,8 +582,13 @@ function startPage() {
             if (block.childElementCount) fragment.append(block);
         }
         transcriptState.hasText = true;
+        transcriptState.content = { text, origin };
+        byId("save-transcript-offline").hidden = false;
+        byId("search-transcript").hidden = false;
+        query.value = "";
+        resetSearch();
         transcriptBody.replaceChildren(fragment);
-        transcriptStatus.textContent = origin + " · Ctrl+F 또는 모바일 브라우저의 ‘페이지에서 찾기’로 검색하세요.";
+        transcriptStatus.textContent = origin;
         generate.hidden = true;
     }
 
@@ -526,6 +620,10 @@ function startPage() {
         transcriptOpener.focus();
     };
     generate.onclick = async () => {
+        if (!navigator.onLine) {
+            transcriptStatus.textContent = "새 음성 인식에는 인터넷 연결이 필요합니다.";
+            return;
+        }
         const current = transcriptState;
         const key = savedKey || keyInput.value.trim();
         if (!key) {
@@ -552,6 +650,108 @@ function startPage() {
         paste.value = "";
     };
 
+    const library = byId("library");
+    const libraryStatus = byId("library-status");
+    const libraryList = byId("library-list");
+
+    async function refreshLibrary() {
+        try {
+            const entries = await libraryStore("readonly", store => store.getAll());
+            entries.sort((a, b) => b.savedAt - a.savedAt);
+            libraryList.replaceChildren(...entries.map(entry => {
+                const row = element("li", "");
+                const title = entry.note?.title || "대본 · " + new URL(entry.video).searchParams.get("v");
+                const open = element("button", title, "secondary library-open");
+                open.type = "button";
+                open.onclick = () => {
+                    if (run.disabled) {
+                        libraryStatus.hidden = false;
+                        libraryStatus.textContent = "정리를 마친 후 저장한 결과를 열 수 있습니다.";
+                        return;
+                    }
+                    address.value = entry.video;
+                    transcriptInput.value = "";
+                    transcriptPanel.open = false;
+                    source = entry.video;
+                    note = entry.note;
+                    card = 0;
+                    status.removeAttribute("data-error");
+                    status.textContent = "";
+                    transcriptView.hidden = true;
+                    prepareTranscript(source);
+                    if (entry.note) setView("note");
+                    else result.hidden = true;
+                    if (entry.transcript) {
+                        showTranscript(entry.transcript.text, entry.transcript.origin);
+                        if (!entry.note) openTranscript(source, open);
+                    }
+                };
+                const remove = element("button", "삭제", "secondary");
+                remove.type = "button";
+                remove.setAttribute("aria-label", title + " 삭제");
+                remove.onclick = async () => {
+                    if (!window.confirm("이 기기에서 저장한 결과를 삭제할까요?")) return;
+                    try {
+                        await libraryStore("readwrite", store => store.delete(entry.video));
+                        await refreshLibrary();
+                    } catch {
+                        libraryStatus.hidden = false;
+                        libraryStatus.textContent = "저장한 결과를 삭제하지 못했습니다.";
+                    }
+                };
+                row.append(open, remove);
+                return row;
+            }));
+            libraryStatus.textContent = entries.length ? "" :
+                "노트, 카드, 대본에서 ‘오프라인에 저장’을 누르면 여기에 모입니다.";
+            libraryStatus.hidden = Boolean(entries.length);
+        } catch {
+            libraryStatus.hidden = false;
+            libraryStatus.textContent = "이 브라우저에서 오프라인 보관함을 열 수 없습니다.";
+        }
+    }
+
+    function saveOffline(buttonId, videoForButton) {
+        const button = byId(buttonId);
+        const label = button.textContent;
+        button.onclick = async () => {
+            const video = videoForButton();
+            if (!video) return;
+            const savedNote = source === video ? note : null;
+            const transcript = transcriptState?.video === video ? transcriptState.content : null;
+            if (!savedNote && !transcript) return;
+            button.disabled = true;
+            try {
+                await libraryStore("readwrite", store => {
+                    const existing = store.get(video);
+                    existing.onsuccess = () => {
+                        store.put({
+                            video,
+                            note: savedNote || existing.result?.note || null,
+                            transcript: transcript || existing.result?.transcript || null,
+                            savedAt: Date.now(),
+                        });
+                    };
+                    return existing;
+                });
+                button.textContent = "저장됨";
+                await refreshLibrary();
+            } catch {
+                button.textContent = "저장 실패";
+            }
+            setTimeout(() => {
+                button.textContent = label;
+                button.disabled = false;
+            }, 1600);
+        };
+    }
+
+    saveOffline("save-offline", () => source);
+    saveOffline("deck-save-offline", () => source);
+    saveOffline("save-transcript-offline", () => transcriptState?.video);
+    library.addEventListener("toggle", () => { if (library.open) refreshLibrary(); });
+    refreshLibrary();
+
     address.addEventListener("input", () => {
         transcriptInput.value = "";
         transcriptPanel.open = false;
@@ -559,6 +759,11 @@ function startPage() {
     form.addEventListener("submit", async event => {
         event.preventDefault();
         if (run.disabled) return;
+        if (!navigator.onLine) {
+            status.dataset.error = "";
+            status.textContent = "새 영상 정리에는 인터넷 연결이 필요합니다. 저장한 결과는 오프라인 보관함에서 열 수 있습니다.";
+            return;
+        }
         status.removeAttribute("data-error");
         try {
             const video = normalizeYouTube(byId("youtube").value);
@@ -610,4 +815,7 @@ function startPage() {
     });
 }
 
-if (typeof document !== "undefined") startPage();
+if (typeof document !== "undefined") {
+    setupInstall();
+    startPage();
+}

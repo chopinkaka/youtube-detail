@@ -16,3 +16,9 @@
 !/website/page-template.html
 !/website/cards.html
 !/website/web-app.mjs
+
+!/website/app.webmanifest
+!/website/sw-template.js
+!/website/icon-180.png
+!/website/icon-192.png
+!/website/icon-512.png

@@ -5,8 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="공개 유튜브 영상을 브라우저에서 핵심 노트와 카드로 정리합니다.">
 <meta name="referrer" content="strict-origin-when-cross-origin">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src https://generativelanguage.googleapis.com; base-uri 'none'; form-action 'none'">
-<title>영상 깊이 읽기</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self'; manifest-src 'self'; worker-src 'self'; connect-src https://generativelanguage.googleapis.com; base-uri 'none'; form-action 'none'">
+<meta name="theme-color" content="#f8f9f4">
+<link rel="manifest" href="app.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>VideoDeepRead · 영상 깊이 읽기</title>
 <style>
 :root{color-scheme:light;--ink:#172e29;--muted:#4d6259;--green:#125948;--line:#d5e1d7;--paper:#f8f9f4}
 *{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.65 "Malgun Gothic",system-ui,sans-serif;word-break:keep-all}
@@ -14,6 +18,14 @@ main{width:min(1080px,100% - 48px);margin:auto;padding:72px 0 54px}
 .hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(340px,1.05fr);gap:48px;align-items:start}
 h1,h2,h3,p{margin:0}h1{font-size:clamp(40px,6vw,68px);letter-spacing:-.08em;line-height:1.12}
 h2{font-size:24px;letter-spacing:-.04em}h3{font-size:18px}.intro{padding-top:20px}
+.app-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px}
+.library{margin-top:14px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.library-list{list-style:none;margin:0;padding:0}
+.library-list li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.library-list li:first-child{border:0}.library-list button{font-size:14px;padding:5px 9px}
+.library-list .library-open{text-align:left;overflow-wrap:anywhere}
+.deck-tools{flex-wrap:wrap}
+.transcript-search{max-width:440px}.transcript-block.match{background:#e9f3eb}
 .lead{max-width:28em;margin:20px 0 24px;font-size:20px;color:var(--muted)}
 form,.result{background:#fff;border:1px solid var(--line);padding:26px;border-radius:22px}
 .field{display:block;margin:14px 0 0}.field>span{display:block;font-weight:700;margin-bottom:5px}
@@ -66,6 +78,15 @@ footer{margin-top:34px;border-top:1px solid var(--line);padding-top:16px}summary
     <header class="intro">
       <h1>영상 깊이 읽기</h1>
       <p class="lead">유튜브 영상의 주장, 근거, 수치와 조건을 모아 핵심 노트와 카드로 읽습니다. 원문이 궁금한 대목은 영상의 해당 시각으로 이동할 수 있습니다.</p>
+      <div class="app-tools">
+        <button id="install-app" class="secondary" type="button" hidden>앱 설치</button>
+        <small id="offline-status" class="stamp" role="status" hidden>오프라인 · 저장한 결과를 열 수 있습니다.</small>
+      </div>
+      <details id="library" class="library">
+        <summary>오프라인 보관함</summary>
+        <p id="library-status" class="note" role="status">저장한 결과를 확인하는 중입니다.</p>
+        <ul id="library-list" class="library-list"></ul>
+      </details>
     </header>
     <form id="analysis" method="post" autocomplete="off">
       <h2>영상과 결과 형식 선택</h2>
@@ -109,6 +130,7 @@ footer{margin-top:34px;border-top:1px solid var(--line);padding-top:16px}summary
       <div aria-label="보기와 저장">
         <button type="button" id="open-transcript" class="secondary">전체 대본 보기</button>
         <button type="button" id="cards" class="secondary">카드로 보기</button>
+        <button type="button" id="save-offline" class="secondary">오프라인에 저장</button>
         <button type="button" id="save" class="secondary">HTML로 저장</button>
         <button type="button" id="save-markdown" class="secondary">Markdown으로 저장</button>
       </div>
@@ -118,7 +140,10 @@ footer{margin-top:34px;border-top:1px solid var(--line);padding-top:16px}summary
   <section id="full-transcript" class="result" hidden aria-labelledby="transcript-heading">
     <div class="result-header">
       <h2 id="transcript-heading" tabindex="-1">전체 대본</h2>
-      <button type="button" id="close-transcript" class="secondary">대본 닫기</button>
+      <div>
+        <button type="button" id="save-transcript-offline" class="secondary" hidden>오프라인에 저장</button>
+        <button type="button" id="close-transcript" class="secondary">대본 닫기</button>
+      </div>
     </div>
     <p class="note" id="transcript-status" role="status"></p>
     <button type="button" id="generate-transcript">Gemini로 음성 인식하기</button>
@@ -127,6 +152,11 @@ footer{margin-top:34px;border-top:1px solid var(--line);padding-top:16px}summary
       <label class="field"><span>유튜브 스크립트 또는 대본</span><textarea id="result-transcript-input" rows="5"></textarea></label>
       <button type="button" id="use-transcript" class="secondary">입력한 대본 보기</button>
     </details>
+    <div id="search-transcript" class="transcript-search" hidden>
+      <label class="field"><span>대본에서 찾기</span><input id="transcript-query" type="search"></label>
+      <button type="button" id="transcript-next" class="secondary">다음 찾기</button>
+      <small id="transcript-match" class="stamp" role="status"></small>
+    </div>
     <div id="transcript-body"></div>
   </section>
   __SAMPLE__
@@ -144,6 +174,7 @@ footer{margin-top:34px;border-top:1px solid var(--line);padding-top:16px}summary
     <button type="button" id="back">입력으로 돌아가기</button>
     <button type="button" id="deck-transcript">전체 대본 보기</button>
     <button type="button" id="notes">노트로 보기</button>
+    <button type="button" id="deck-save-offline">오프라인에 저장</button>
   </div>
   <article id="slide" class="deck-slide" aria-labelledby="slide-title"></article>
   <nav class="deck-pager" aria-label="카드 이동">
