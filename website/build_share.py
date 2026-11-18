@@ -61,6 +61,8 @@ def make_release(cards: Path | None, base_url: str = "") -> dict:
             raise ValueError("앱에서 저장한 ‘카드 저장 (.html)’ 파일을 선택하세요.")
 
     page = (KIT / "page-template.html").read_text(encoding="utf-8-sig")
+    web_script = (KIT / "web-app.mjs").read_bytes()
+    page = page.replace("__WEB_VERSION__", hashlib.sha256(web_script).hexdigest()[:10])
     if cards_bytes is None:
         page = page.replace("__SAMPLE__", "")
     else:
@@ -78,9 +80,10 @@ def make_release(cards: Path | None, base_url: str = "") -> dict:
         info['sha256'] = hashlib.sha256((staging / 'youtube-detail-windows.zip').read_bytes()).hexdigest()
         if cards_bytes is not None:
             (staging / "cards.html").write_bytes(cards_bytes)
+        (staging / "web-app.mjs").write_bytes(web_script)
         (staging / "index.html").write_text(page, encoding="utf-8")
         (staging / "release.json").write_text(json.dumps(info, indent=2) + "\n", encoding="utf-8")
-        for name in ("youtube-detail-windows.zip", "cards.html", "release.json", "index.html"):
+        for name in ("youtube-detail-windows.zip", "cards.html", "web-app.mjs", "release.json", "index.html"):
             file = staging / name
             if file.exists():
                 os.replace(file, DIST / name)
