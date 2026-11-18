@@ -35,7 +35,11 @@ a{color:var(--green);text-underline-offset:3px}a:focus-visible,button:focus-visi
 .result{margin-top:28px}.result-header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
 .result-header>div{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.takeaway{background:#e9f3eb;padding:14px 16px;border-radius:10px}
 .topic{padding:18px 0;border-bottom:1px solid var(--line)}.topic:last-child{border-bottom:0}.topic h3{margin-bottom:10px}.point{margin-top:10px}.point>p{margin-top:3px}.result a{overflow-wrap:anywhere}
-#transcript-body p{margin:10px 0;overflow-wrap:anywhere}#transcript-body .stamp{margin-right:6px}#generate-transcript{margin:12px 0}
+#transcript-body{margin-top:18px;overflow-wrap:anywhere}
+.transcript-block{padding:10px 0;border-bottom:1px solid var(--line)}
+.transcript-block p+p{margin-top:6px}
+.transcript-block .stamp{display:inline-block;margin-bottom:5px;color:var(--green);font-weight:700;font-variant-numeric:tabular-nums}
+#generate-transcript{margin:12px 0}
 body.presenting{background:#edf1f5}
 .deck{width:min(1060px,100% - 36px);margin:0 auto;padding:22px 0 36px;color:#172a38}
 .deck-tools{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px}
@@ -79,7 +83,7 @@ footer{margin-top:34px;border-top:1px solid var(--line);padding-top:16px}summary
       <p id="key-status" class="note" role="status" hidden></p>
       <div class="controls">
         <label class="field"><span>읽을 분량</span><select id="length"><option>간결하게</option><option selected>균형 있게</option><option>자세히</option></select></label>
-        <label class="field"><span>더 자세히 볼 내용 (선택)</span><input id="focus" maxlength="300" aria-describedby="focus-help" placeholder="예: 인터벌 페이스와 휴식 시간"><small id="focus-help" class="field-help">영상 전체를 정리하면서 이 내용을 더 자세히 다룹니다.</small></label>
+        <label class="field"><span>더 자세히 볼 내용 (선택)</span><input id="focus" maxlength="300" aria-describedby="focus-help" placeholder="예: 첫 집 마련에 필요한 현금과 대출"><small id="focus-help" class="field-help">단어나 질문을 넣으면 관련 근거를 먼저 설명하고 영상 전체도 정리합니다.</small></label>
       </div>
       <fieldset class="formats">
         <legend>결과 형식</legend>
@@ -88,13 +92,14 @@ footer{margin-top:34px;border-top:1px solid var(--line);padding-top:16px}summary
           <label><input type="radio" name="view" value="card"> 카드</label>
         </div>
       </fieldset>
-      <button id="run" type="submit">영상 정리하기</button>
+      <button id="run" type="submit">정리</button>
+      <button id="preview-transcript" type="button" class="secondary">대본 보기</button>
       <p class="note">영상 주소와 관심 주제를 Gemini에 보냅니다. 무료로 이용하려면 Free Tier 프로젝트의 키를 사용하세요.</p>
       <p id="status" role="status" aria-live="polite"></p>
       <details id="transcript-panel" class="note">
         <summary>대본으로 정리하기</summary>
         <label class="field"><span>유튜브 스크립트 또는 직접 만든 대본</span><textarea id="transcript" rows="5" aria-describedby="transcript-help"></textarea></label>
-        <p id="transcript-help">영상 설명에서 ‘스크립트 표시’를 열어 복사한 뒤 ‘영상 정리하기’를 누르세요. 시각도 함께 붙여 넣으면 원본으로 이동할 수 있습니다. 대본을 입력하면 그 텍스트를 Gemini에 보냅니다.</p>
+        <p id="transcript-help">자막이 있는 영상은 유튜브 설명의 ‘스크립트 표시’에서 복사할 수 있습니다. ‘대본 보기’는 키 없이 열립니다. ‘정리’를 누르면 붙여 넣은 대본을 Gemini에 보냅니다.</p>
       </details>
     </form>
   </div>
@@ -113,11 +118,12 @@ footer{margin-top:34px;border-top:1px solid var(--line);padding-top:16px}summary
   <section id="full-transcript" class="result" hidden aria-labelledby="transcript-heading">
     <div class="result-header">
       <h2 id="transcript-heading" tabindex="-1">전체 대본</h2>
-      <button type="button" id="close-transcript" class="secondary">노트로 돌아가기</button>
+      <button type="button" id="close-transcript" class="secondary">대본 닫기</button>
     </div>
     <p class="note" id="transcript-status" role="status"></p>
     <button type="button" id="generate-transcript">Gemini로 음성 인식하기</button>
     <details id="paste-details" class="note"><summary>가지고 있는 대본으로 열기</summary>
+      <p class="note">동영상 설명에서 ‘스크립트 표시’를 찾아 대본과 시각을 복사하세요. <a id="caption-source" target="_blank" rel="noopener noreferrer">유튜브 영상 열기 ↗</a></p>
       <label class="field"><span>유튜브 스크립트 또는 대본</span><textarea id="result-transcript-input" rows="5"></textarea></label>
       <button type="button" id="use-transcript" class="secondary">입력한 대본 보기</button>
     </details>
